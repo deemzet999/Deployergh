@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub Replacer</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    background-image:
+      radial-gradient(circle at 50% 0%, rgba(255, 0, 60, 0.15), transparent 60%),
+      linear-gradient(180deg, #000 0%, #1a0308 100%);
+    padding: 24px;
+  }
+
+  /* Grid merah di background */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 0, 60, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 0, 60, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    animation: gridMove 20s linear infinite;
+  }
+
+  @keyframes gridMove {
+    from { background-position: 0 0; }
+    to   { background-position: 40px 40px; }
+  }
+
+  .card {
+    position: relative;
+    z-index: 1;
+    background: rgba(20, 3, 6, 0.92);
+    border: 1px solid rgba(255, 0, 60, 0.35);
+    border-radius: 18px;
+    padding: 38px 36px;
+    max-width: 560px;
+    width: 100%;
+    box-shadow:
+      0 0 30px rgba(255, 0, 60, 0.2),
+      inset 0 0 40px rgba(255, 0, 60, 0.05);
+    backdrop-filter: blur(6px);
+    animation: fadeIn 0.7s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .header .dot {
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #ff0040;
+    box-shadow: 0 0 10px #ff0040, 0 0 20px #ff0040;
+    margin-right: 8px;
+    animation: pulse 1.4s ease-in-out infinite;
+    vertical-align: middle;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .header h1 {
+    color: #ffe8ec;
+    font-size: 1.65rem;
+    text-shadow: 0 0 18px rgba(255, 0, 60, 0.5);
+    margin-bottom: 6px;
+  }
+
+  .header h1 span { color: #ff0040; }
+
+  .header p {
+    color: #c9868f;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+  }
+
+  .field {
+    margin-bottom: 18px;
+  }
+
+  label {
+    display: block;
+    color: #ff8fa3;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+
+  label .opt {
+    color: #7a4a52;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.78rem;
+  }
+
+  input[type="text"],
+  input[type="password"],
+  input[type="file"] {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 0, 60, 0.28);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: #ffe8ec;
+    font-size: 0.92rem;
+    transition: all 0.25s ease;
+    outline: none;
+  }
+
+  input[type="text"]::placeholder,
+  input[type="password"]::placeholder {
+    color: #6b3a42;
+  }
+
+  input[type="text"]:focus,
+  input[type="password"]:focus,
+  input[type="file"]:focus {
+    border-color: #ff0040;
+    box-shadow: 0 0 12px rgba(255, 0, 60, 0.4);
+    background: rgba(20, 3, 6, 0.9);
+  }
+
+  input[type="file"] {
+    padding: 9px 12px;
+    cursor: pointer;
+    color: #c9868f;
+  }
+
+  input[type="file"]::file-selector-button {
+    background: linear-gradient(135deg, #ff0040, #b3002d);
+    color: #fff;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 7px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    margin-right: 12px;
+    transition: all 0.25s ease;
+  }
+
+  input[type="file"]::file-selector-button:hover {
+    background: linear-gradient(135deg, #ff3366, #cc0033);
+    box-shadow: 0 0 12px rgba(255, 0, 60, 0.6);
+  }
+
+  /* Checkbox custom */
+  .checkbox-field {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: rgba(255, 0, 60, 0.05);
+    border: 1px dashed rgba(255, 0, 60, 0.35);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 22px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+
+  .checkbox-field:hover {
+    background: rgba(255, 0, 60, 0.1);
+    border-color: rgba(255, 0, 60, 0.6);
+  }
+
+  .checkbox-field input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border: 2px solid #ff0040;
+    border-radius: 5px;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    margin-top: 2px;
+    transition: all 0.2s ease;
+  }
+
+  .checkbox-field input[type="checkbox"]:checked {
+    background: #ff0040;
+    box-shadow: 0 0 12px rgba(255, 0, 60, 0.7);
+  }
+
+  .checkbox-field input[type="checkbox"]:checked::after {
+    content: "✓";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 900;
+  }
+
+  .checkbox-field .cb-text {
+    color: #ffb3c0;
+    font-size: 0.86rem;
+    line-height: 1.5;
+  }
+
+  .checkbox-field .cb-text strong {
+    color: #ff0040;
+  }
+
+  .btn {
+    width: 100%;
+    background: linear-gradient(135deg, #ff0040, #b3002d);
+    color: #fff;
+    border: none;
+    padding: 15px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 22px rgba(255, 0, 60, 0.45);
+    text-transform: uppercase;
+  }
+
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 35px rgba(255, 0, 60, 0.85);
+    background: linear-gradient(135deg, #ff3366, #cc0033);
+  }
+
+  .btn:active {
+    transform: translateY(0) scale(0.99);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .note {
+    margin-top: 18px;
+    font-size: 0.75rem;
+    color: #7a4a52;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .note a {
+    color: #ff0040;
+    text-decoration: none;
+  }
+
+  /* Log output */
+  #log {
+    margin-top: 20px;
+    background: #000;
+    border: 1px solid rgba(255, 0, 60, 0.3);
+    border-radius: 10px;
+    padding: 14px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: #8fff9f;
+    max-height: 180px;
+    overflow-y: auto;
+    display: none;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  #log.show { display: block; }
+
+  #log .err { color: #ff5577; }
+  #log .ok  { color: #66ff99; }
+  #log .info{ color: #ffcc66; }
+
+  #log::-webkit-scrollbar { width: 6px; }
+  #log::-webkit-scrollbar-track { background: #1a0308; }
+  #log::-webkit-scrollbar-thumb { background: #ff0040; border-radius: 3px; }
+
+  @media (max-width: 480px) {
+    .card { padding: 28px 20px; }
+    .header h1 { font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <h1><span>GitHub</span> Replacer</h1>
+    <p><span class="dot"></span>Hapus &amp; ganti isi repo dengan ZIP baru</p>
+  </div>
+
+  <!-- Owner -->
+  <div class="field">
+    <label for="owner">Owner / Username</label>
+    <input type="text" id="owner" placeholder="contoh: zetzgtg" autocomplete="off">
+  </div>
+
+  <!-- Repo -->
+  <div class="field">
+    <label for="repo">Nama Repository</label>
+    <input type="text" id="repo" placeholder="contoh: my-project" autocomplete="off">
+  </div>
+
+  <!-- Token -->
+  <div class="field">
+    <label for="token">Personal Access Token (PAT)</label>
+    <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+  </div>
+
+  <!-- Folder -->
+  <div class="field">
+    <label for="folder">Folder Tujuan <span class="opt">(opsional — kosongkan untuk root)</span></label>
+    <input type="text" id="folder" placeholder="contoh: public/html" autocomplete="off">
+  </div>
+
+  <!-- Branch -->
+  <div class="field">
+    <label for="branch">Branch</label>
+    <input type="text" id="branch" placeholder="main" value="main" autocomplete="off">
+  </div>
+
+  <!-- ZIP -->
+  <div class="field">
+    <label for="zip">File ZIP</label>
+    <input type="file" id="zip" accept=".zip">
+  </div>
+
+  <!-- Checkbox Hapus -->
+  <label class="checkbox-field" for="clear">
+    <input type="checkbox" id="clear">
+    <span class="cb-text">
+      <strong>Hapus semua file</strong> di folder tujuan sebelum upload.
+      Jika tidak dicentang, file baru akan ditambahkan / menimpa yang sama.
+    </span>
+  </label>
+
+  <button class="btn" id="submitBtn">🚀 Proses Replace</button>
+
+  <div class="note">
+    Token hanya dipakai di browser Anda dan tidak disimpan di mana pun.<br>
+    Pastikan token punya scope <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">repo</a>.
+  </div>
+
+  <pre id="log"></pre>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const logEl = $("log");
+const btn = $("submitBtn");
+
+function log(msg, cls = "") {
+  logEl.classList.add("show");
+  const span = document.createElement("span");
+  if (cls) span.className = cls;
+  span.textContent = msg + "\n";
+  logEl.appendChild(span);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ===== GitHub API helpers =====
+const API = "https://api.github.com";
+
+async function gh(path, { method = "GET", token, body, raw = false } = {}) {
+  const headers = {
+    "Authorization": `Bearer ${token}`,
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+  if (body && !raw) headers["Content-Type"] = "application/json";
+
+  const res = await fetch(API + path, {
+    method,
+    headers,
+    body: raw ? body : (body ? JSON.stringify(body) : undefined),
+  });
+
+  if (res.status === 204) return { status: 204 };
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.message || `HTTP ${res.status}`);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
+}
+
+// Encode path per-segment (spasi, dll)
+function encPath(p) {
+  return p.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+}
+
+// ===== ZIP reader (minimal, pakai JSZip dari CDN) =====
+function loadJSZip() {
+  return new Promise((resolve, reject) => {
+    if (window.JSZip) return resolve(window.JSZip);
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+    s.onload = () => resolve(window.JSZip);
+    s.onerror = () => reject(new Error("Gagal memuat JSZip"));
+    document.head.appendChild(s);
+  });
+}
+
+// ===== Main flow =====
+btn.addEventListener("click", async () => {
+  logEl.innerHTML = "";
+  logEl.classList.remove("show");
+
+  const owner  = $("owner").value.trim();
+  const repo   = $("repo").value.trim();
+  const token  = $("token").value.trim();
+  const folder = $("folder").value.trim().replace(/^\/+|\/+$/g, "");
+  const branch = ($("branch").value.trim() || "main");
+  const clear  = $("clear").checked;
+  const file   = $("zip").files[0];
+
+  // Validasi
+  if (!owner) return log("❌ Owner wajib diisi.", "err");
+  if (!repo)  return log("❌ Nama repo wajib diisi.", "err");
+  if (!token) return log("❌ Token wajib diisi.", "err");
+  if (!file)  return log("❌ File ZIP wajib dipilih.", "err");
+  if (!file.name.toLowerCase().endsWith(".zip"))
+    return log("❌ File harus berekstensi .zip", "err");
+
+  btn.disabled = true;
+  btn.textContent = "⏳ Memproses...";
+
+  try {
+    // 1. Load ZIP
+    log("📦 Membaca file ZIP...", "info");
+    const JSZip = await loadJSZip();
+    const zip = await JSZip.loadAsync(file);
+
+    const entries = [];
+    zip.forEach((relPath, entry) => {
+      if (entry.dir) return;
+      entries.push({ relPath, entry });
+    });
+
+    if (entries.length === 0) {
+      log("⚠️ ZIP kosong, tidak ada file.", "info");
+      return;
+    }
+    log(`✅ ${entries.length} file ditemukan di ZIP.`, "ok");
+
+    // 2. Ambil commit terbaru branch
+    log(`🔍 Mengambil branch "${branch}"...`, "info");
+    let baseSha = null;
+    let baseTreeSha = null;
+    try {
+      const ref = await gh(`/repos/${owner}/${repo}/git/ref/heads/${branch}`, { token });
+      baseSha = ref.object.sha;
+      const commit = await gh(`/repos/${owner}/${repo}/git/commits/${baseSha}`, { token });
+      baseTreeSha = commit.tree.sha;
+    } catch (e) {
+      if (e.status === 404) {
+        log(`⚠️ Branch "${branch}" tidak ada. Akan dibuat baru (repo harus punya commit awal).`, "info");
+        // Ambil default branch
+        const repoInfo = await gh(`/repos/${owner}/${repo}`, { token });
+        const defBranch = repoInfo.default_branch;
+        const ref = await gh(`/repos/${owner}/${repo}/git/ref/heads/${defBranch}`, { token });
+        baseSha = ref.object.sha;
+        const commit = await gh(`/repos/${owner}/${repo}/git/commits/${baseSha}`, { token });
+        baseTreeSha = commit.tree.sha;
+      } else {
+        throw e;
+      }
+    }
+
+    // 3. Kumpulkan file lama di folder tujuan (untuk dihapus)
+    let oldPaths = [];
+    if (clear) {
+      log(`🗑️ Mengumpulkan file lama di folder "${folder || '/'}"...`, "info");
+      const tree = await gh(`/repos/${owner}/${repo}/git/trees/${baseTreeSha}?recursive=1`, { token });
+      const prefix = folder ? folder + "/" : "";
+      oldPaths = (tree.tree || [])
+        .filter((t) => t.type === "blob" && t.path.startsWith(prefix))
+        .map((t) => t.path);
+      log(`✅ ${oldPaths.length} file lama ditemukan.`, "ok");
+    }
+
+    // 4. Buat blob untuk setiap file baru
+    log("⬆️ Upload file ke GitHub (blob)...", "info");
+    const newTreeEntries = [];
+    let done = 0;
+
+    for (const { relPath, entry } of entries) {
+      const content = await entry.async("base64");
+      const blob = await gh(`/repos/${owner}/${repo}/git/blobs`, {
+        method: "POST",
+        token,
+        body: { content, encoding: "base64" },
+      });
+
+      const finalPath = folder ? `${folder}/${relPath}` : relPath;
+      newTreeEntries.push({
+        path: finalPath,
+        mode: "100644",
+        type: "blob",
+        sha: blob.sha,
+      });
+
+      done++;
+      if (done % 10 === 0 || done === entries.length) {
+        log(`   → ${done}/${entries.length} file diupload`, "");
+      }
+    }
+
+    // 5. Buat tree baru (dengan penghapusan jika diminta)
+    log("🌳 Membuat tree baru...", "info");
+    const treeBody = { tree: newTreeEntries };
+
+    if (clear) {
+      // Tree API: set sha: null untuk menghapus path
+      for (const p of oldPaths) {
+        treeBody.tree.push({
+          path: p,
+          mode: "100644",
+          type: "blob",
+          sha: null,
+        });
+      }
+    }
+
+    const newTree = await gh(`/repos/${owner}/${repo}/git/trees`, {
+      method: "POST",
+      token,
+      body: treeBody,
+    });
+
+    // 6. Buat commit
+    log("📝 Membuat commit...", "info");
+    const msg = clear
+      ? `Replace content${folder ? ` in ${folder}/` : ""} — ${new Date().toISOString()}`
+      : `Upload content${folder ? ` to ${folder}/` : ""} — ${new Date().toISOString()}`;
+
+    const commitBody = {
+      message: msg,
+      tree: newTree.sha,
+    };
+    if (baseSha) commitBody.parents = [baseSha];
+
+    const newCommit = await gh(`/repos/${owner}/${repo}/git/commits`, {
+      method: "POST",
+      token,
+      body: commitBody,
+    });
+
+    // 7. Update / buat ref branch
+    log(`🔗 Update branch "${branch}"...`, "info");
+    try {
+      await gh(`/repos/${owner}/${repo}/git/refs/heads/${branch}`, {
+        method: "PATCH",
+        token,
+        body: { sha: newCommit.sha, force: true },
+      });
+    } catch (e) {
+      if (e.status === 404 || e.status === 422) {
+        // Buat ref baru
+        await gh(`/repos/${owner}/${repo}/git/refs`, {
+          method: "POST",
+          token,
+          body: { ref: `refs/heads/${branch}`, sha: newCommit.sha },
+        });
+      } else {
+        throw e;
+      }
+    }
+
+    log("", "");
+    log("🎉 SELESAI!", "ok");
+    log(`✅ Repo: ${owner}/${repo}`, "ok");
+    log(`✅ Branch: ${branch}`, "ok");
+    log(`✅ Folder: ${folder || '(root)'}`, "ok");
+    log(`✅ File baru: ${entries.length}`, "ok");
+    if (clear) log(`✅ File lama dihapus: ${oldPaths.length}`, "ok");
+    log(`🔗 Commit: ${newCommit.sha.substring(0, 7)}`, "info");
+    log(`🔗 https://github.com/${owner}/${repo}/commit/${newCommit.sha}`, "info");
+
+  } catch (err) {
+    log("", "");
+    log("❌ GAGAL: " + (err.message || err), "err");
+    if (err.status === 401) log("   → Token tidak valid / expired.", "err");
+    if (err.status === 403) log("   → Token tidak punya izin (scope 'repo').", "err");
+    if (err.status === 404) log("   → Repo / owner / branch tidak ditemukan.", "err");
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "🚀 Proses Replace";
+  }
+});
+</script>
+
+</body>
+  </html>

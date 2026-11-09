@@ -24,7 +24,6 @@
     padding: 24px;
   }
 
-  /* Grid merah di background */
   body::before {
     content: "";
     position: fixed;
@@ -173,7 +172,6 @@
     box-shadow: 0 0 12px rgba(255, 0, 60, 0.6);
   }
 
-  /* Checkbox custom */
   .checkbox-field {
     display: flex;
     align-items: flex-start;
@@ -182,7 +180,7 @@
     border: 1px dashed rgba(255, 0, 60, 0.35);
     border-radius: 10px;
     padding: 14px 16px;
-    margin-bottom: 22px;
+    margin-bottom: 14px;
     cursor: pointer;
     transition: all 0.25s ease;
   }
@@ -234,6 +232,14 @@
     color: #ff0040;
   }
 
+  /* Highlight saat tree baru aktif */
+  .checkbox-field.tree-active {
+    background: rgba(255, 0, 60, 0.15);
+    border-style: solid;
+    border-color: #ff0040;
+    box-shadow: 0 0 15px rgba(255, 0, 60, 0.3);
+  }
+
   .btn {
     width: 100%;
     background: linear-gradient(135deg, #ff0040, #b3002d);
@@ -248,6 +254,7 @@
     transition: all 0.3s ease;
     box-shadow: 0 0 22px rgba(255, 0, 60, 0.45);
     text-transform: uppercase;
+    margin-top: 8px;
   }
 
   .btn:hover {
@@ -279,7 +286,6 @@
     text-decoration: none;
   }
 
-  /* Log output */
   #log {
     margin-top: 20px;
     background: #000;
@@ -289,7 +295,7 @@
     font-family: 'Consolas', 'Courier New', monospace;
     font-size: 0.8rem;
     color: #8fff9f;
-    max-height: 180px;
+    max-height: 200px;
     overflow-y: auto;
     display: none;
     white-space: pre-wrap;
@@ -320,48 +326,53 @@
     <p><span class="dot"></span>Hapus &amp; ganti isi repo dengan ZIP baru</p>
   </div>
 
-  <!-- Owner -->
   <div class="field">
     <label for="owner">Owner / Username</label>
     <input type="text" id="owner" placeholder="contoh: zetzgtg" autocomplete="off">
   </div>
 
-  <!-- Repo -->
   <div class="field">
     <label for="repo">Nama Repository</label>
     <input type="text" id="repo" placeholder="contoh: my-project" autocomplete="off">
   </div>
 
-  <!-- Token -->
   <div class="field">
     <label for="token">Personal Access Token (PAT)</label>
     <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
   </div>
 
-  <!-- Folder -->
   <div class="field">
     <label for="folder">Folder Tujuan <span class="opt">(opsional — kosongkan untuk root)</span></label>
     <input type="text" id="folder" placeholder="contoh: public/html" autocomplete="off">
   </div>
 
-  <!-- Branch -->
   <div class="field">
     <label for="branch">Branch</label>
     <input type="text" id="branch" placeholder="main" value="main" autocomplete="off">
   </div>
 
-  <!-- ZIP -->
   <div class="field">
     <label for="zip">File ZIP</label>
     <input type="file" id="zip" accept=".zip">
   </div>
 
-  <!-- Checkbox Hapus -->
+  <!-- ✅ CHECKBOX BARU: Tree Fresh -->
+  <label class="checkbox-field" for="freshTree">
+    <input type="checkbox" id="freshTree">
+    <span class="cb-text">
+      <strong>Buat tree baru (fresh tree)</strong> — abaikan semua file lama di repo.
+      Centang ini jika ingin <strong>upload 2 folder atau lebih</strong> sekaligus tanpa
+      tercampur tree lama.
+    </span>
+  </label>
+
+  <!-- Checkbox Hapus isi folder -->
   <label class="checkbox-field" for="clear">
     <input type="checkbox" id="clear">
     <span class="cb-text">
       <strong>Hapus semua file</strong> di folder tujuan sebelum upload.
       Jika tidak dicentang, file baru akan ditambahkan / menimpa yang sama.
+      <em>(Otomatis tidak berlaku jika "tree baru" dicentang.)</em>
     </span>
   </label>
 
@@ -388,6 +399,28 @@ function log(msg, cls = "") {
   logEl.appendChild(span);
   logEl.scrollTop = logEl.scrollHeight;
 }
+
+// ===== Toggle visual: fresh tree aktif → clear folder disabled =====
+const freshTreeCb = $("freshTree");
+const clearCb = $("clear");
+const clearLabel = clearCb.closest(".checkbox-field");
+const freshLabel = freshTreeCb.closest(".checkbox-field");
+
+freshTreeCb.addEventListener("change", () => {
+  const active = freshTreeCb.checked;
+  freshLabel.classList.toggle("tree-active", active);
+  // Kalau tree baru aktif, clear folder otomatis nonaktif
+  if (active) {
+    clearCb.checked = false;
+    clearCb.disabled = true;
+    clearLabel.style.opacity = "0.4";
+    clearLabel.style.pointerEvents = "none";
+  } else {
+    clearCb.disabled = false;
+    clearLabel.style.opacity = "1";
+    clearLabel.style.pointerEvents = "auto";
+  }
+});
 
 // ===== GitHub API helpers =====
 const API = "https://api.github.com";
@@ -417,12 +450,7 @@ async function gh(path, { method = "GET", token, body, raw = false } = {}) {
   return data;
 }
 
-// Encode path per-segment (spasi, dll)
-function encPath(p) {
-  return p.split("/").filter(Boolean).map(encodeURIComponent).join("/");
-}
-
-// ===== ZIP reader (minimal, pakai JSZip dari CDN) =====
+// ===== ZIP reader =====
 function loadJSZip() {
   return new Promise((resolve, reject) => {
     if (window.JSZip) return resolve(window.JSZip);
@@ -439,13 +467,14 @@ btn.addEventListener("click", async () => {
   logEl.innerHTML = "";
   logEl.classList.remove("show");
 
-  const owner  = $("owner").value.trim();
-  const repo   = $("repo").value.trim();
-  const token  = $("token").value.trim();
-  const folder = $("folder").value.trim().replace(/^\/+|\/+$/g, "");
-  const branch = ($("branch").value.trim() || "main");
-  const clear  = $("clear").checked;
-  const file   = $("zip").files[0];
+  const owner     = $("owner").value.trim();
+  const repo      = $("repo").value.trim();
+  const token     = $("token").value.trim();
+  const folder    = $("folder").value.trim().replace(/^\/+|\/+$/g, "");
+  const branch    = ($("branch").value.trim() || "main");
+  const freshTree = $("freshTree").checked;
+  const clear     = freshTree ? false : $("clear").checked;
+  const file      = $("zip").files[0];
 
   // Validasi
   if (!owner) return log("❌ Owner wajib diisi.", "err");
@@ -467,6 +496,8 @@ btn.addEventListener("click", async () => {
     const entries = [];
     zip.forEach((relPath, entry) => {
       if (entry.dir) return;
+      // skip file sampah macOS
+      if (relPath.startsWith("__MACOSX/") || relPath.endsWith(".DS_Store")) return;
       entries.push({ relPath, entry });
     });
 
@@ -475,6 +506,16 @@ btn.addEventListener("click", async () => {
       return;
     }
     log(`✅ ${entries.length} file ditemukan di ZIP.`, "ok");
+
+    // Deteksi otomatis berapa top-level folder di ZIP
+    const topFolders = new Set();
+    for (const { relPath } of entries) {
+      const parts = relPath.split("/");
+      if (parts.length > 1) topFolders.add(parts[0]);
+    }
+    if (topFolders.size > 0) {
+      log(`📁 Folder terdeteksi di ZIP: ${[...topFolders].slice(0, 5).join(", ")}${topFolders.size > 5 ? "..." : ""}`, "info");
+    }
 
     // 2. Ambil commit terbaru branch
     log(`🔍 Mengambil branch "${branch}"...`, "info");
@@ -487,8 +528,7 @@ btn.addEventListener("click", async () => {
       baseTreeSha = commit.tree.sha;
     } catch (e) {
       if (e.status === 404) {
-        log(`⚠️ Branch "${branch}" tidak ada. Akan dibuat baru (repo harus punya commit awal).`, "info");
-        // Ambil default branch
+        log(`⚠️ Branch "${branch}" tidak ada. Akan dibuat baru.`, "info");
         const repoInfo = await gh(`/repos/${owner}/${repo}`, { token });
         const defBranch = repoInfo.default_branch;
         const ref = await gh(`/repos/${owner}/${repo}/git/ref/heads/${defBranch}`, { token });
@@ -500,9 +540,9 @@ btn.addEventListener("click", async () => {
       }
     }
 
-    // 3. Kumpulkan file lama di folder tujuan (untuk dihapus)
+    // 3. Kumpulkan file lama di folder tujuan (hanya jika clear & bukan fresh tree)
     let oldPaths = [];
-    if (clear) {
+    if (clear && !freshTree) {
       log(`🗑️ Mengumpulkan file lama di folder "${folder || '/'}"...`, "info");
       const tree = await gh(`/repos/${owner}/${repo}/git/trees/${baseTreeSha}?recursive=1`, { token });
       const prefix = folder ? folder + "/" : "";
@@ -512,7 +552,7 @@ btn.addEventListener("click", async () => {
       log(`✅ ${oldPaths.length} file lama ditemukan.`, "ok");
     }
 
-    // 4. Buat blob untuk setiap file baru
+    // 4. Upload blob
     log("⬆️ Upload file ke GitHub (blob)...", "info");
     const newTreeEntries = [];
     let done = 0;
@@ -539,33 +579,54 @@ btn.addEventListener("click", async () => {
       }
     }
 
-    // 5. Buat tree baru (dengan penghapusan jika diminta)
+    // 5. Buat tree baru
     log("🌳 Membuat tree baru...", "info");
-    const treeBody = { tree: newTreeEntries };
 
-    if (clear) {
-      // Tree API: set sha: null untuk menghapus path
-      for (const p of oldPaths) {
-        treeBody.tree.push({
-          path: p,
-          mode: "100644",
-          type: "blob",
-          sha: null,
-        });
+    let newTree;
+    if (freshTree) {
+      // ✅ FRESH TREE: tanpa base_tree → hanya berisi file baru
+      // Parent commit akan diganti total tree-nya
+      log("🆕 Mode FRESH TREE — semua file lama diabaikan.", "info");
+      newTree = await gh(`/repos/${owner}/${repo}/git/trees`, {
+        method: "POST",
+        token,
+        body: { tree: newTreeEntries },  // TANPA base_tree
+      });
+    } else {
+      // Tree inkremental: gabung dengan tree lama
+      const treeBody = {
+        base_tree: baseTreeSha,
+        tree: newTreeEntries,
+      };
+
+      if (clear) {
+        for (const p of oldPaths) {
+          treeBody.tree.push({
+            path: p,
+            mode: "100644",
+            type: "blob",
+            sha: null,
+          });
+        }
       }
-    }
 
-    const newTree = await gh(`/repos/${owner}/${repo}/git/trees`, {
-      method: "POST",
-      token,
-      body: treeBody,
-    });
+      newTree = await gh(`/repos/${owner}/${repo}/git/trees`, {
+        method: "POST",
+        token,
+        body: treeBody,
+      });
+    }
 
     // 6. Buat commit
     log("📝 Membuat commit...", "info");
-    const msg = clear
-      ? `Replace content${folder ? ` in ${folder}/` : ""} — ${new Date().toISOString()}`
-      : `Upload content${folder ? ` to ${folder}/` : ""} — ${new Date().toISOString()}`;
+    let msg;
+    if (freshTree) {
+      msg = `Fresh tree replace${folder ? ` at ${folder}/` : ""} — ${new Date().toISOString()}`;
+    } else if (clear) {
+      msg = `Replace content${folder ? ` in ${folder}/` : ""} — ${new Date().toISOString()}`;
+    } else {
+      msg = `Upload content${folder ? ` to ${folder}/` : ""} — ${new Date().toISOString()}`;
+    }
 
     const commitBody = {
       message: msg,
@@ -589,7 +650,6 @@ btn.addEventListener("click", async () => {
       });
     } catch (e) {
       if (e.status === 404 || e.status === 422) {
-        // Buat ref baru
         await gh(`/repos/${owner}/${repo}/git/refs`, {
           method: "POST",
           token,
@@ -606,7 +666,9 @@ btn.addEventListener("click", async () => {
     log(`✅ Branch: ${branch}`, "ok");
     log(`✅ Folder: ${folder || '(root)'}`, "ok");
     log(`✅ File baru: ${entries.length}`, "ok");
-    if (clear) log(`✅ File lama dihapus: ${oldPaths.length}`, "ok");
+    if (freshTree) log(`🆕 Mode: FRESH TREE (semua file lama diganti)`, "ok");
+    if (clear) log(`🗑️ File lama dihapus: ${oldPaths.length}`, "ok");
+    if (topFolders.size > 0) log(`📁 Folder diupload: ${topFolders.size}`, "ok");
     log(`🔗 Commit: ${newCommit.sha.substring(0, 7)}`, "info");
     log(`🔗 https://github.com/${owner}/${repo}/commit/${newCommit.sha}`, "info");
 
@@ -616,6 +678,7 @@ btn.addEventListener("click", async () => {
     if (err.status === 401) log("   → Token tidak valid / expired.", "err");
     if (err.status === 403) log("   → Token tidak punya izin (scope 'repo').", "err");
     if (err.status === 404) log("   → Repo / owner / branch tidak ditemukan.", "err");
+    if (err.status === 422) log("   → Kemungkinan tree konflik. Coba centang 'Buat tree baru'.", "err");
     console.error(err);
   } finally {
     btn.disabled = false;
@@ -625,4 +688,4 @@ btn.addEventListener("click", async () => {
 </script>
 
 </body>
-  </html>
+</html>
